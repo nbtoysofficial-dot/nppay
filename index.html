@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>NB Pay — กรอกข้อมูลหนังสือรับรองหักภาษี ณ ที่จ่าย</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Sarabun', sans-serif; background: #F8FAFC; color: #1E293B; min-height: 100vh; }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #0F1F3D, #1E3A6E);
+      padding: 14px 20px;
+      display: flex; align-items: center; gap: 12px;
+      position: sticky; top: 0; z-index: 100;
+      box-shadow: 0 2px 12px rgba(15,31,61,0.3);
+    }
+    .logo-icon {
+      width: 36px; height: 36px; background: #F97316;
+      border-radius: 8px; display: flex; align-items: center;
+      justify-content: center; font-weight: 800; font-size: 15px; color: #fff;
+      flex-shrink: 0;
+    }
+    .logo-text { color: #fff; font-weight: 700; font-size: 16px; line-height: 1.2; }
+    .logo-sub { color: rgba(255,255,255,0.6); font-size: 11px; }
+
+    /* Page */
+    .page { max-width: 640px; margin: 0 auto; padding: 20px 16px 48px; }
+
+    /* Card */
+    .card {
+      background: #fff; border-radius: 14px; padding: 20px;
+      margin-bottom: 14px; border: 1px solid #CBD5E1;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+    .section-title {
+      font-size: 12px; font-weight: 700; color: #F97316;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+    }
+    .section-dot { width: 6px; height: 6px; border-radius: 50%; background: #F97316; flex-shrink: 0; }
+
+    /* Fields */
+    .field { margin-bottom: 14px; }
+    .field:last-child { margin-bottom: 0; }
+    label { display: block; font-size: 13px; font-weight: 600; color: #1E293B; margin-bottom: 6px; }
+    .req { color: #F97316; margin-left: 2px; }
+    input, textarea, select {
+      width: 100%; padding: 11px 14px; border-radius: 9px;
+      border: 1.5px solid #CBD5E1; font-size: 15px; font-family: 'Sarabun', sans-serif;
+      color: #1E293B; background: #fff; outline: none;
+    }
+    input:focus, textarea:focus, select:focus { border-color: #F97316; }
+    input.err, textarea.err, select.err { border-color: #DC2626; background: #FEF2F2; }
+    textarea { resize: vertical; min-height: 80px; }
+    .hint { font-size: 12px; color: #64748B; margin-top: 4px; }
+    .err-msg { font-size: 12px; color: #DC2626; margin-top: 4px; }
+
+    /* Toggle buttons */
+    .toggle-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .toggle-btn {
+      flex: 1; min-width: 70px; padding: 10px 6px; border-radius: 9px;
+      border: 1.5px solid #CBD5E1; background: #fff; color: #64748B;
+      font-weight: 600; font-size: 13px; font-family: inherit;
+      cursor: pointer; text-align: center; transition: all 0.15s;
+      line-height: 1.4;
+    }
+    .toggle-btn.active {
+      border-color: #F97316; background: #FFF7ED; color: #F97316;
+    }
+
+    /* Tax rate badge */
+    .tax-badge {
+      margin-top: 10px; padding: 10px 14px; border-radius: 9px;
+      font-size: 13px; display: none;
+    }
+    .tax-badge.show { display: block; }
+    .tax-badge.rate3 { background: #F0FDF4; border: 1.5px solid #86EFAC; }
+    .tax-badge.rate5 { background: #FFF7ED; border: 1.5px solid #FED7AA; }
+    .tax-rate { font-weight: 700; }
+    .rate3 .tax-rate { color: #16A34A; }
+    .rate5 .tax-rate { color: #F97316; }
+    .tax-law { color: #64748B; margin-left: 8px; }
+
+    /* Checkboxes for duties */
+    .duty-list { display: none; }
+    .duty-list.show { display: block; }
+    .duty-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 9px;
+      border: 1.5px solid #CBD5E1; margin-bottom: 8px;
+      cursor: pointer; transition: all 0.15s; user-select: none;
+    }
+    .duty-item.checked { border-color: #F97316; background: #FFF7ED; }
+    .duty-item:last-child { margin-bottom: 0; }
+    .duty-check {
+      width: 20px; height: 20px; border-radius: 5px;
+      border: 2px solid #CBD5E1; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+    }
+    .duty-item.checked .duty-check {
+      background: #F97316; border-color: #F97316; color: #fff;
+      font-size: 12px; font-weight: 700;
+    }
+    .duty-label { font-size: 14px; color: #1E293B; }
+    .duty-item.checked .duty-label { color: #F97316; font-weight: 600; }
+
+    /* Submit */
+    .submit-btn {
+      width: 100%; padding: 14px; border-radius: 10px; border: none;
+      background: linear-gradient(135deg, #F97316, #EA580C);
+      color: #fff; font-size: 16px; font-weight: 700;
+      font-family: inherit; cursor: pointer;
+      box-shadow: 0 4px 14px rgba(249,115,22,0.35);
+      margin-top: 4px;
+    }
+    .submit-btn:disabled { background: #94A3B8; box-shadow: none; cursor: not-allowed; }
+    .privacy-note { text-align: center; margin-top: 10px; font-size: 12px; color: #94A3B8; }
+
+    /* Success */
+    .success-box {
+      background: #F0FDF4; border: 1.5px solid #86EFAC;
+      border-radius: 14px; padding: 32px 24px; text-align: center;
+      display: none;
+    }
+    .success-box.show { display: block; }
+    .success-icon { font-size: 52px; margin-bottom: 14px; }
+    .success-title { font-size: 20px; font-weight: 700; color: #16A34A; margin-bottom: 8px; }
+    .success-sub { font-size: 14px; color: #64748B; line-height: 1.6; }
+
+    /* Loading */
+    #loading {
+      position: fixed; inset: 0; background: rgba(15,31,61,0.6);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 999; display: none;
+    }
+    #loading.show { display: flex; }
+    .spinner {
+      width: 44px; height: 44px; border: 4px solid rgba(255,255,255,0.3);
+      border-top-color: #F97316; border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<div id="loading"><div class="spinner"></div></div>
+
+<div class="header">
+  <div class="logo-icon">NB</div>
+  <div>
+    <div class="logo-text">NB Pay</div>
+    <div class="logo-sub">กรอกข้อมูลหนังสือรับรองหักภาษี ณ ที่จ่าย</div>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- Success -->
+  <div class="success-box" id="success">
+    <div class="success-icon">✅</div>
+    <div class="success-title">ส่งข้อมูลเรียบร้อยแล้ว</div>
+    <div class="success-sub">NB Pay จะออกหนังสือรับรองหักภาษี ณ ที่จ่ายให้ภายหลัง<br/>หากมีข้อสงสัยติดต่อแอดมินได้เลยครับ</div>
+  </div>
+
+  <!-- Form -->
+  <div id="form-area">
+
+    <!-- ประเภท -->
+    <div class="card">
+      <div class="section-title"><span class="section-dot"></span> ประเภทผู้ขอหนังสือรับรองฯ</div>
+      <div class="toggle-row" id="type-row">
+        <button class="toggle-btn active" data-value="บุคคลธรรมดา" onclick="selectType(this)">👤<br/>บุคคลธรรมดา</button>
+        <button class="toggle-btn" data-value="นิติบุคคล" onclick="selectType(this)">🏢<br/>นิติบุคคล</button>
+      </div>
+    </div>
+
+    <!-- ข้อมูลหนังสือรับรอง -->
+    <div class="card">
+      <div class="section-title"><span class="section-dot"></span> ข้อมูลสำหรับหนังสือรับรองหักภาษี ณ ที่จ่าย</div>
+
+      <div class="field">
+        <label id="name-label">ชื่อ-นามสกุล <span class="req">*</span></label>
+        <input type="text" id="name" placeholder="เช่น นายสมชาย ใจดี" />
+        <div class="err-msg" id="name-err"></div>
+      </div>
+
+      <div class="field">
+        <label>ที่อยู่สำหรับออกหนังสือรับรองฯ <span class="req">*</span></label>
+        <textarea id="address" placeholder="บ้านเลขที่ ถนน แขวง/ตำบล เขต/อำเภอ จังหวัด รหัสไปรษณีย์"></textarea>
+        <div class="err-msg" id="address-err"></div>
+      </div>
+
+      <div class="field">
+        <label>เลขประจำตัวผู้เสียภาษี <span class="req" id="taxid-req" style="display:none">*</span></label>
+        <input type="text" id="taxId" placeholder="เลข 13 หลัก" inputmode="numeric" maxlength="13" />
+        <div class="hint" id="taxid-hint">ไม่บังคับ — ใส่ได้ถ้าต้องการให้ออกในชื่อของคุณ</div>
+        <div class="err-msg" id="taxid-err"></div>
+      </div>
+    </div>
+
+    <!-- ช่องทางติดต่อ -->
+    <div class="card">
+      <div class="section-title"><span class="section-dot"></span> ช่องทางติดต่อ</div>
+
+      <div class="field">
+        <label>เบอร์โทรศัพท์ <span class="req">*</span></label>
+        <input type="tel" id="phone" placeholder="0XX-XXX-XXXX" />
+        <div class="err-msg" id="phone-err"></div>
+      </div>
+
+      <div class="field">
+        <label>อีเมล</label>
+        <input type="email" id="email" placeholder="example@email.com" />
+        <div class="hint">ถ้าระบุ จะส่ง PDF หนังสือรับรองฯ ให้ทางอีเมลนี้</div>
+        <div class="err-msg" id="email-err"></div>
+      </div>
+    </div>
+
+    <!-- ตำแหน่ง หน้าที่ สถานที่ -->
+    <div class="card">
+      <div class="section-title"><span class="section-dot"></span> ตำแหน่ง หน้าที่ และสถานที่ทำงาน</div>
+
+      <div class="field">
+        <label>ประเภท <span class="req">*</span></label>
+        <div class="toggle-row">
+          <button class="toggle-btn" data-pos="กรรมการ" data-rate="3" data-law="มาตรา 40(2)" onclick="selectPosition(this)">🏆<br/>กรรมการ</button>
+          <button class="toggle-btn" data-pos="แอดมิน" data-rate="3" data-law="มาตรา 3 เตรส" onclick="selectPosition(this)">💻<br/>แอดมิน</button>
+          <button class="toggle-btn" data-pos="พนักงานขาย" data-rate="3" data-law="มาตรา 40(2)" onclick="selectPosition(this)">🛍️<br/>พนักงานขาย</button>
+          <button class="toggle-btn" data-pos="ผู้รับเงินรางวัล" data-rate="5" data-law="มาตรา 40(8)" onclick="selectPosition(this)">🎖️<br/>เงินรางวัล</button>
+        </div>
+        <div class="tax-badge" id="tax-badge">
+          <span class="tax-rate" id="tax-rate-text"></span>
+          <span class="tax-law" id="tax-law-text"></span>
+        </div>
+        <div class="err-msg" id="pos-err"></div>
+      </div>
+
+      <div class="field duty-list" id="duty-list">
+        <label>หน้าที่ในงาน <span class="req">*</span></label>
+        <div id="duties-container"></div>
+        <div class="err-msg" id="duty-err"></div>
+      </div>
+
+      <div class="field">
+        <label>สถานที่ทำงาน <span class="req">*</span></label>
+        <input type="text" id="venue" placeholder="เช่น โลตัส สาขาศรีราชา" />
+        <div class="hint">ระบุชื่อสาขาให้ชัดเจน</div>
+        <div class="err-msg" id="venue-err"></div>
+      </div>
+    </div>
+
+    <!-- บัญชีธนาคาร -->
+    <div class="card">
+      <div class="section-title"><span class="section-dot"></span> บัญชีธนาคาร (สำหรับโอนค่าจ้าง)</div>
+
+      <div class="field">
+        <label>ชื่อธนาคาร <span class="req">*</span></label>
+        <select id="bankName">
+          <option value="">-- เลือกธนาคาร --</option>
+          <option>กสิกรไทย (KBank)</option>
+          <option>กรุงเทพ (BBL)</option>
+          <option>กรุงไทย (KTB)</option>
+          <option>ไทยพาณิชย์ (SCB)</option>
+          <option>กรุงศรีอยุธยา (BAY)</option>
+          <option>ออมสิน (GSB)</option>
+          <option>ธ.ก.ส. (BAAC)</option>
+          <option>ทหารไทยธนชาต (TTB)</option>
+          <option>ยูโอบี (UOB)</option>
+          <option>อื่นๆ</option>
+        </select>
+        <div class="err-msg" id="bank-err"></div>
+      </div>
+
+      <div class="field">
+        <label>ชื่อบัญชี (ตามหน้าสมุด) <span class="req">*</span></label>
+        <input type="text" id="bankAccountName" placeholder="เช่น นายสมชาย ใจดี" />
+        <div class="err-msg" id="bankname-err"></div>
+      </div>
+
+      <div class="field">
+        <label>เลขบัญชี <span class="req">*</span></label>
+        <input type="text" id="bankAccountNo" placeholder="เช่น 123-4-56789-0" inputmode="numeric" />
+        <div class="err-msg" id="bankno-err"></div>
+      </div>
+    </div>
+
+    <!-- หมายเหตุ -->
+    <div class="card">
+      <div class="section-title"><span class="section-dot"></span> หมายเหตุเพิ่มเติม</div>
+      <textarea id="notes" placeholder="เช่น งาน Tournament วันที่ ... รุ่น ..."></textarea>
+    </div>
+
+    <button class="submit-btn" id="submit-btn" onclick="submitForm()">
+      📤 ส่งข้อมูลเพื่อออกหนังสือรับรองหักภาษี ณ ที่จ่าย
+    </button>
+    <div class="privacy-note">ข้อมูลของคุณจะถูกใช้เพื่อออกหนังสือรับรองหักภาษี ณ ที่จ่ายเท่านั้น</div>
+
+  </div><!-- /form-area -->
+</div><!-- /page -->
+
+<script>
+const LIFF_ID = "2010532430-ZedBwu4E";
+
+const DUTIES_MAP = {
+  "กรรมการ":          ["ตัดสินการแข่งขัน", "ดูแลสนามการแข่งขัน"],
+  "แอดมิน":           ["ทำข้อมูลการแข่งขัน"],
+  "พนักงานขาย":       ["จัดบูธสินค้า", "ขายสินค้า"],
+  "ผู้รับเงินรางวัล": ["เงินรางวัลจากการแข่งขัน"],
+};
+
+let selectedType = "บุคคลธรรมดา";
+let selectedPosition = "";
+let selectedDuties = [];
+let lineProfile = null;
+
+// Init LIFF
+(async () => {
+  try {
+    await liff.init({ liffId: LIFF_ID });
+    if (liff.isLoggedIn()) {
+      lineProfile = await liff.getProfile();
+    }
+  } catch(e) {
+    console.warn("LIFF init error:", e);
+  }
+})();
+
+function selectType(btn) {
+  document.querySelectorAll('#type-row .toggle-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedType = btn.dataset.value;
+  const isCorperate = selectedType === "นิติบุคคล";
+  document.getElementById('name-label').innerHTML = isCorperate
+    ? 'ชื่อบริษัท / ห้าง / นิติบุคคล <span class="req">*</span>'
+    : 'ชื่อ-นามสกุล <span class="req">*</span>';
+  document.getElementById('name').placeholder = isCorperate ? 'เช่น บริษัท ตัวอย่าง จำกัด' : 'เช่น นายสมชาย ใจดี';
+  document.getElementById('taxid-req').style.display = isCorperate ? 'inline' : 'none';
+  document.getElementById('taxid-hint').textContent = isCorperate
+    ? 'กรอกเลขนิติบุคคล 13 หลัก'
+    : 'ไม่บังคับ — ใส่ได้ถ้าต้องการให้ออกในชื่อของคุณ';
+}
+
+function selectPosition(btn) {
+  document.querySelectorAll('[data-pos]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedPosition = btn.dataset.pos;
+  selectedDuties = [];
+
+  // Tax badge
+  const badge = document.getElementById('tax-badge');
+  const rate = btn.dataset.rate;
+  badge.className = `tax-badge show rate${rate}`;
+  document.getElementById('tax-rate-text').textContent = `หักภาษี ${rate}%`;
+  document.getElementById('tax-law-text').textContent = btn.dataset.law;
+
+  // Duties
+  const duties = DUTIES_MAP[selectedPosition] || [];
+  const container = document.getElementById('duties-container');
+  const list = document.getElementById('duty-list');
+  container.innerHTML = '';
+  duties.forEach(d => {
+    const div = document.createElement('div');
+    div.className = 'duty-item';
+    div.innerHTML = `<div class="duty-check"></div><span class="duty-label">${d}</span>`;
+    div.onclick = () => toggleDuty(div, d);
+    container.appendChild(div);
+  });
+  list.className = 'field duty-list show';
+}
+
+function toggleDuty(el, duty) {
+  if (selectedDuties.includes(duty)) {
+    selectedDuties = selectedDuties.filter(d => d !== duty);
+    el.classList.remove('checked');
+    el.querySelector('.duty-check').textContent = '';
+  } else {
+    selectedDuties.push(duty);
+    el.classList.add('checked');
+    el.querySelector('.duty-check').textContent = '✓';
+  }
+}
+
+function clearErr(id) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = '';
+}
+function showErr(id, msg) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = msg;
+}
+
+function validate() {
+  let ok = true;
+  ['name-err','address-err','taxid-err','phone-err','email-err','pos-err','duty-err','venue-err','bank-err','bankname-err','bankno-err'].forEach(clearErr);
+  ['name','address','phone','taxId','email','bankName','bankAccountName','bankAccountNo','venue'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('err');
+  });
+
+  const name = document.getElementById('name').value.trim();
+  if (!name) { showErr('name-err','กรุณากรอกชื่อ'); document.getElementById('name').classList.add('err'); ok = false; }
+
+  const address = document.getElementById('address').value.trim();
+  if (!address) { showErr('address-err','กรุณากรอกที่อยู่'); document.getElementById('address').classList.add('err'); ok = false; }
+
+  const phone = document.getElementById('phone').value.trim();
+  if (!phone) { showErr('phone-err','กรุณากรอกเบอร์โทร'); document.getElementById('phone').classList.add('err'); ok = false; }
+  else if (!/^[0-9\-\+\s]{9,15}$/.test(phone)) { showErr('phone-err','รูปแบบเบอร์โทรไม่ถูกต้อง'); document.getElementById('phone').classList.add('err'); ok = false; }
+
+  const email = document.getElementById('email').value.trim();
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showErr('email-err','รูปแบบอีเมลไม่ถูกต้อง'); document.getElementById('email').classList.add('err'); ok = false; }
+
+  const taxId = document.getElementById('taxId').value.replace(/[-\s]/g,'');
+  if (selectedType === 'นิติบุคคล' && !taxId) { showErr('taxid-err','นิติบุคคลต้องกรอกเลขประจำตัวผู้เสียภาษี'); ok = false; }
+  else if (taxId && !/^[0-9]{13}$/.test(taxId)) { showErr('taxid-err','เลขประจำตัวต้องมี 13 หลัก'); ok = false; }
+
+  if (!selectedPosition) { showErr('pos-err','กรุณาเลือกประเภท'); ok = false; }
+  else if (selectedDuties.length === 0) { showErr('duty-err','กรุณาเลือกหน้าที่อย่างน้อย 1 อย่าง'); ok = false; }
+
+  const venue = document.getElementById('venue').value.trim();
+  if (!venue) { showErr('venue-err','กรุณากรอกสถานที่'); document.getElementById('venue').classList.add('err'); ok = false; }
+
+  const bankName = document.getElementById('bankName').value;
+  if (!bankName) { showErr('bank-err','กรุณาเลือกธนาคาร'); document.getElementById('bankName').classList.add('err'); ok = false; }
+
+  const bankAccountName = document.getElementById('bankAccountName').value.trim();
+  if (!bankAccountName) { showErr('bankname-err','กรุณากรอกชื่อบัญชี'); document.getElementById('bankAccountName').classList.add('err'); ok = false; }
+
+  const bankAccountNo = document.getElementById('bankAccountNo').value.trim();
+  if (!bankAccountNo) { showErr('bankno-err','กรุณากรอกเลขบัญชี'); document.getElementById('bankAccountNo').classList.add('err'); ok = false; }
+
+  return ok;
+}
+
+async function submitForm() {
+  if (!validate()) {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+
+  document.getElementById('loading').classList.add('show');
+  document.getElementById('submit-btn').disabled = true;
+
+  const taxRate = document.querySelector('[data-pos].active')?.dataset.rate || '3';
+  const taxLaw  = document.querySelector('[data-pos].active')?.dataset.law  || '';
+
+  const payload = {
+    submittedAt:    new Date().toISOString(),
+    lineUserId:     lineProfile?.userId || '',
+    lineDisplayName: lineProfile?.displayName || '',
+    type:           selectedType,
+    name:           document.getElementById('name').value.trim(),
+    address:        document.getElementById('address').value.trim(),
+    taxId:          document.getElementById('taxId').value.replace(/[-\s]/g,''),
+    phone:          document.getElementById('phone').value.trim(),
+    email:          document.getElementById('email').value.trim(),
+    position:       selectedPosition,
+    duties:         selectedDuties.join(', '),
+    venue:          document.getElementById('venue').value.trim(),
+    taxRate:        taxRate + '%',
+    taxLaw:         taxLaw,
+    bankName:       document.getElementById('bankName').value,
+    bankAccountName: document.getElementById('bankAccountName').value.trim(),
+    bankAccountNo:  document.getElementById('bankAccountNo').value.trim(),
+    notes:          document.getElementById('notes').value.trim(),
+  };
+
+  try {
+    const res = await fetch('/api/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      document.getElementById('loading').classList.remove('show');
+      document.getElementById('form-area').style.display = 'none';
+      document.getElementById('success').classList.add('show');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      throw new Error('Server error');
+    }
+  } catch(e) {
+    document.getElementById('loading').classList.remove('show');
+    document.getElementById('submit-btn').disabled = false;
+    alert('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้งครับ');
+  }
+}
+</script>
+</body>
+</html>
